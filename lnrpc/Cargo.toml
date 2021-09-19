@@ -1,0 +1,16 @@
+[package]
+name = "lnrpc"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+hex = "0.4"
+hyper = "0.14"
+hyper-openssl = "0.9"
+openssl = "0.10"
+prost = "0.8"
+thiserror = "1.0"
+tonic = "0.5"
+
+[build-dependencies]
+tonic-build = "0.5"
