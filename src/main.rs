@@ -12,10 +12,10 @@ use crate::collector::LndCollector;
 #[clap(version = "0.1.0", author = "Felipe Rosa <felipe.sgrosa@gmail.com>")]
 struct Opts {
     #[clap(long)]
-    macaroon_path: String,
+    macaroon_path: Option<String>,
     #[clap(long)]
-    tls_cert_path: String,
-    #[clap(long, default_value = "https://127.0.0.1:10009")]
+    tls_cert_path: Option<String>,
+    #[clap(long, default_value = "https://localhost:10009")]
     lnd_endpoint: String,
     #[clap(long, default_value = "127.0.0.1:29090")]
     exporter_listen_addr: SocketAddr,
@@ -59,25 +59,38 @@ async fn main() {
 
     let opts = Opts::parse();
 
-    let mut macaroon = vec![];
+    let macaroon = if let Some(macaroon_path) = opts.macaroon_path {
+        let mut macaroon_bytes = vec![];
 
-    tokio::fs::File::open(opts.macaroon_path)
-        .await
-        .expect("macaroon file opened")
-        .read_to_end(&mut macaroon)
-        .await
-        .expect("read all");
-    log::info!("Macaroon loaded");
+        tokio::fs::File::open(macaroon_path)
+            .await
+            .expect("macaroon file opened")
+            .read_to_end(&mut macaroon_bytes)
+            .await
+            .expect("read all");
 
-    let mut tls_cert = vec![];
+        log::info!("Macaroon loaded");
 
-    tokio::fs::File::open(opts.tls_cert_path)
-        .await
-        .expect("cert file opened")
-        .read_to_end(&mut tls_cert)
-        .await
-        .expect("read all");
-    log::info!("TLS cert loaded");
+        Some(macaroon_bytes)
+    } else {
+        None
+    };
+
+    let tls_cert = if let Some(tls_cert_path) = opts.tls_cert_path {
+        let mut tls_cert_bytes = vec![];
+
+        tokio::fs::File::open(tls_cert_path)
+            .await
+            .expect("cert file opened")
+            .read_to_end(&mut tls_cert_bytes)
+            .await
+            .expect("read all");
+        log::info!("TLS cert loaded");
+
+        Some(tls_cert_bytes)
+    } else {
+        None
+    };
 
     let lnd_client = lnrpc::new(
         tls_cert,
