@@ -1,7 +1,7 @@
 mod metrics;
 mod scappers;
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use lnrpc::LndClient;
 use prometheus::{
@@ -10,9 +10,16 @@ use prometheus::{
 };
 use tokio::sync::Mutex;
 
+pub struct ListPaymentsCache {
+    index_offset: u64,
+    outgoing_payments: HashMap<lnrpc::payment::PaymentStatus, i64>,
+    payment_failure_reasons: HashMap<lnrpc::PaymentFailureReason, i64>,
+}
+
 pub struct LndCollector {
     lnd_client: Arc<Mutex<LndClient>>,
     metric_desc: Vec<Desc>,
+    listpayments_cache: Arc<Mutex<ListPaymentsCache>>,
 }
 
 impl LndCollector {
@@ -28,6 +35,11 @@ impl LndCollector {
             .flatten()
             .cloned()
             .collect(),
+            listpayments_cache: Arc::new(Mutex::new(ListPaymentsCache {
+                index_offset: 0,
+                outgoing_payments: HashMap::new(),
+                payment_failure_reasons: HashMap::new(),
+            })),
         }
     }
 }
@@ -54,17 +66,25 @@ impl Collector for LndCollector {
             }
         };
 
-        // Prevent concurrent collects
-        let lnd_client_lock = self.lnd_client.clone();
+        let lnd_client = self.lnd_client.clone();
+        let listpayments_cache = self.listpayments_cache.clone();
 
         std::thread::spawn(move || {
             rt.block_on(async {
-                let mut lnd_client = lnd_client_lock.lock().await;
+                // Prevent concurrent collects
+                let mut lnd_client_lock = lnd_client.lock().await;
+                let mut listpayments_cache_lock = listpayments_cache.lock().await;
                 let mut metrics = vec![];
 
-                metrics.extend(scappers::scrape_getinfo(&mut lnd_client).await);
-                metrics.extend(scappers::scrape_listpayments(&mut lnd_client).await);
-                metrics.extend(scappers::scrape_listchannels(&mut lnd_client).await);
+                metrics.extend(scappers::scrape_getinfo(&mut lnd_client_lock).await);
+                metrics.extend(
+                    scappers::scrape_listpayments(
+                        &mut lnd_client_lock,
+                        &mut listpayments_cache_lock,
+                    )
+                    .await,
+                );
+                metrics.extend(scappers::scrape_listchannels(&mut lnd_client_lock).await);
 
                 metrics
             })
