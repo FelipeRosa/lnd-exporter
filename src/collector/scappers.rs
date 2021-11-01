@@ -44,15 +44,17 @@ pub async fn scrape_listpayments(
 
     match res {
         Ok(res) => {
-            cache.index_offset = res.get_ref().last_index_offset;
+            if res.get_ref().last_index_offset > 0 {
+                cache.index_offset = res.get_ref().last_index_offset;
 
-            for payment in res.get_ref().payments.iter() {
-                *cache.outgoing_payments.entry(payment.status()).or_default() += 1;
+                for payment in res.get_ref().payments.iter() {
+                    *cache.outgoing_payments.entry(payment.status()).or_default() += 1;
 
-                *cache
-                    .payment_failure_reasons
-                    .entry(payment.failure_reason())
-                    .or_default() += 1;
+                    *cache
+                        .payment_failure_reasons
+                        .entry(payment.failure_reason())
+                        .or_default() += 1;
+                }
             }
 
             let outgoing_payments = super::metrics::outgoing_payments();
