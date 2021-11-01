@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-
 use lnrpc::LndClient;
 use prometheus::{core::Collector, proto::MetricFamily};
 use tokio::sync::MutexGuard;
+
+use super::ListPaymentsCache;
 
 pub async fn scrape_getinfo(lnd_client: &mut MutexGuard<'_, LndClient>) -> Vec<MetricFamily> {
     let mut metrics = vec![];
@@ -28,36 +28,36 @@ pub async fn scrape_getinfo(lnd_client: &mut MutexGuard<'_, LndClient>) -> Vec<M
     metrics
 }
 
-pub async fn scrape_listpayments(lnd_client: &mut MutexGuard<'_, LndClient>) -> Vec<MetricFamily> {
+pub async fn scrape_listpayments(
+    lnd_client: &mut MutexGuard<'_, LndClient>,
+    cache: &mut MutexGuard<'_, ListPaymentsCache>,
+) -> Vec<MetricFamily> {
     let mut metrics = vec![];
 
     let res = lnd_client
         .list_payments(lnrpc::ListPaymentsRequest {
             include_incomplete: true,
+            index_offset: cache.index_offset,
             ..lnrpc::ListPaymentsRequest::default()
         })
         .await;
 
     match res {
         Ok(res) => {
-            let mut outgoing_payments_status_counts: HashMap<lnrpc::payment::PaymentStatus, i64> =
-                HashMap::new();
-            let mut failure_reasons_count: HashMap<lnrpc::PaymentFailureReason, i64> =
-                HashMap::new();
+            cache.index_offset = res.get_ref().last_index_offset;
 
             for payment in res.get_ref().payments.iter() {
-                *outgoing_payments_status_counts
-                    .entry(payment.status())
-                    .or_default() += 1;
+                *cache.outgoing_payments.entry(payment.status()).or_default() += 1;
 
-                *failure_reasons_count
+                *cache
+                    .payment_failure_reasons
                     .entry(payment.failure_reason())
                     .or_default() += 1;
             }
 
             let outgoing_payments = super::metrics::outgoing_payments();
 
-            for (status, count) in outgoing_payments_status_counts.into_iter() {
+            for (status, count) in cache.outgoing_payments.iter() {
                 let status_str = match status {
                     lnrpc::payment::PaymentStatus::Unknown => "unknown",
                     lnrpc::payment::PaymentStatus::InFlight => "in_flight",
@@ -67,12 +67,12 @@ pub async fn scrape_listpayments(lnd_client: &mut MutexGuard<'_, LndClient>) -> 
 
                 outgoing_payments
                     .with_label_values(&[status_str])
-                    .set(count);
+                    .set(*count);
             }
 
             let payment_failure_reasons = super::metrics::payment_failure_reasons();
 
-            for (reason, count) in failure_reasons_count.into_iter() {
+            for (reason, count) in cache.payment_failure_reasons.iter() {
                 let reason_str = match reason {
                     lnrpc::PaymentFailureReason::FailureReasonNone => "none",
                     lnrpc::PaymentFailureReason::FailureReasonTimeout => "timeout",
@@ -88,7 +88,7 @@ pub async fn scrape_listpayments(lnd_client: &mut MutexGuard<'_, LndClient>) -> 
 
                 payment_failure_reasons
                     .with_label_values(&[reason_str])
-                    .set(count);
+                    .set(*count);
             }
 
             metrics.extend(outgoing_payments.collect());
