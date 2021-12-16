@@ -54,6 +54,8 @@ pub async fn scrape_listpayments(
                         .payment_failure_reasons
                         .entry(payment.failure_reason())
                         .or_default() += 1;
+
+                    cache.total_fee_msat += payment.fee_msat;
                 }
             }
 
@@ -93,8 +95,12 @@ pub async fn scrape_listpayments(
                     .set(*count);
             }
 
+            let total_fee_msat = super::metrics::total_fee_msat();
+            total_fee_msat.set(cache.total_fee_msat);
+
             metrics.extend(outgoing_payments.collect());
             metrics.extend(payment_failure_reasons.collect());
+            metrics.extend(total_fee_msat.collect())
         }
 
         Err(e) => {

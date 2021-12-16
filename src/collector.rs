@@ -14,6 +14,7 @@ pub struct ListPaymentsCache {
     index_offset: u64,
     outgoing_payments: HashMap<lnrpc::payment::PaymentStatus, i64>,
     payment_failure_reasons: HashMap<lnrpc::PaymentFailureReason, i64>,
+    total_fee_msat: i64,
 }
 
 pub struct LndCollector {
@@ -39,6 +40,7 @@ impl LndCollector {
                 index_offset: 0,
                 outgoing_payments: HashMap::new(),
                 payment_failure_reasons: HashMap::new(),
+                total_fee_msat: 0,
             })),
         }
     }

@@ -39,3 +39,7 @@ pub fn channel_balance_total_sat() -> prometheus::IntGaugeVec {
     )
     .expect("valid metric")
 }
+
+pub fn total_fee_msat() -> prometheus::IntGauge {
+    prometheus::IntGauge::new("lnd_total_fee_msat", "Total fee paid").expect("valid metric")
+}
