@@ -729,13 +729,13 @@ pub struct Channel {
     ///
     ///The number of seconds that the channel has been monitored by the channel
     ///scoring system. Scores are currently not persisted, so this value may be
-    ///less than the lifetime of the channel [EXPERIMENTAL].
+    ///less than the lifetime of the channel \[EXPERIMENTAL\].
     #[prost(int64, tag = "23")]
     pub lifetime: i64,
     ///
     ///The number of seconds that the remote peer has been observed as being online
     ///by the channel scoring system over the lifetime of the channel
-    ///[EXPERIMENTAL].
+    ///\[EXPERIMENTAL\].
     #[prost(int64, tag = "24")]
     pub uptime: i64,
     ///
@@ -1998,7 +1998,7 @@ pub struct QueryRoutesResponse {
     pub routes: ::prost::alloc::vec::Vec<Route>,
     ///
     ///The success probability of the returned route based on the current mission
-    ///control state. [EXPERIMENTAL]
+    ///control state. \[EXPERIMENTAL\]
     #[prost(double, tag = "2")]
     pub success_prob: f64,
 }
@@ -2263,7 +2263,7 @@ pub struct NodeMetricsResponse {
     ///through the node for each pair of nodes in the graph (not counting paths
     ///starting or ending at this node).
     ///Map of node pubkey to betweenness centrality of the node. Normalized
-    ///values are in the [0,1] closed interval.
+    ///values are in the \[0,1\] closed interval.
     #[prost(map = "string, message", tag = "1")]
     pub betweenness_centrality:
         ::std::collections::HashMap<::prost::alloc::string::String, FloatMetric>,
@@ -2273,7 +2273,7 @@ pub struct FloatMetric {
     /// Arbitrary float value.
     #[prost(double, tag = "1")]
     pub value: f64,
-    /// The value normalized to [0,1] or [-1,1].
+    /// The value normalized to \[0,1\] or \[-1,1\].
     #[prost(double, tag = "2")]
     pub normalized_value: f64,
 }
@@ -2529,7 +2529,7 @@ pub struct Invoice {
     ///The state the invoice is in.
     #[prost(enumeration = "invoice::InvoiceState", tag = "21")]
     pub state: i32,
-    /// List of HTLCs paying to this invoice [EXPERIMENTAL].
+    /// List of HTLCs paying to this invoice \[EXPERIMENTAL\].
     #[prost(message, repeated, tag = "22")]
     pub htlcs: ::prost::alloc::vec::Vec<InvoiceHtlc>,
     /// List of features advertised on the invoice.
@@ -2537,7 +2537,7 @@ pub struct Invoice {
     pub features: ::std::collections::HashMap<u32, Feature>,
     ///
     ///Indicates if this invoice was a spontaneous payment that arrived via keysend
-    ///[EXPERIMENTAL].
+    ///\[EXPERIMENTAL\].
     #[prost(bool, tag = "25")]
     pub is_keysend: bool,
     ///
@@ -3609,7 +3609,7 @@ pub mod lightning_client {
     impl<T> LightningClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
-        T::ResponseBody: Body + Send + Sync + 'static,
+        T::ResponseBody: Body + Send + 'static,
         T::Error: Into<StdError>,
         <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     {
