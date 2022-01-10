@@ -5,6 +5,8 @@ use tokio::sync::MutexGuard;
 use super::ListPaymentsCache;
 
 pub async fn scrape_getinfo(lnd_client: &mut MutexGuard<'_, LndClient>) -> Vec<MetricFamily> {
+    log::debug!("Scrapping getinfo");
+
     let mut metrics = vec![];
 
     let res = lnd_client.get_info(lnrpc::GetInfoRequest {}).await;
@@ -32,6 +34,8 @@ pub async fn scrape_listpayments(
     lnd_client: &mut MutexGuard<'_, LndClient>,
     cache: &mut MutexGuard<'_, ListPaymentsCache>,
 ) -> Vec<MetricFamily> {
+    log::debug!("Scrapping listpayments");
+
     let mut metrics = vec![];
 
     let res = lnd_client
@@ -112,6 +116,8 @@ pub async fn scrape_listpayments(
 }
 
 pub async fn scrape_listchannels(lnd_client: &mut MutexGuard<'_, LndClient>) -> Vec<MetricFamily> {
+    log::debug!("Scrapping listchannels");
+
     let mut metrics = vec![];
 
     let res = lnd_client

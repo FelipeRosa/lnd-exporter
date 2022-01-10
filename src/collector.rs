@@ -52,6 +52,9 @@ impl Collector for LndCollector {
     }
 
     fn collect(&self) -> Vec<MetricFamily> {
+        log::info!("Collecting metrics");
+
+        log::debug!("Building Tokio runtime");
         let build_rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build();
@@ -71,9 +74,11 @@ impl Collector for LndCollector {
         let lnd_client = self.lnd_client.clone();
         let listpayments_cache = self.listpayments_cache.clone();
 
-        std::thread::spawn(move || {
+        log::debug!("Starting collect thread");
+        let metrics = std::thread::spawn(move || {
             rt.block_on(async {
                 // Prevent concurrent collects
+                log::debug!("Acquiring collector locks");
                 let mut lnd_client_lock = lnd_client.lock().await;
                 let mut listpayments_cache_lock = listpayments_cache.lock().await;
                 let mut metrics = vec![];
@@ -92,6 +97,9 @@ impl Collector for LndCollector {
             })
         })
         .join()
-        .unwrap()
+        .unwrap();
+
+        log::info!("Done collecting metrics");
+        metrics
     }
 }
