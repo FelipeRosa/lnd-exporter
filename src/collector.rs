@@ -54,50 +54,28 @@ impl Collector for LndCollector {
     fn collect(&self) -> Vec<MetricFamily> {
         log::info!("Collecting metrics");
 
-        log::debug!("Building Tokio runtime");
-        let build_rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build();
-
-        let rt = match build_rt {
-            Ok(rt) => rt,
-            Err(e) => {
-                log::error!(
-                    "Failed to build Collector's collect Tokio runtime ERROR={:?}",
-                    e
-                );
-
-                return vec![];
-            }
-        };
-
         let lnd_client = self.lnd_client.clone();
         let listpayments_cache = self.listpayments_cache.clone();
 
-        log::debug!("Starting collect thread");
-        let metrics = std::thread::spawn(move || {
-            rt.block_on(async {
-                // Prevent concurrent collects
-                log::debug!("Acquiring collector locks");
-                let mut lnd_client_lock = lnd_client.lock().await;
-                let mut listpayments_cache_lock = listpayments_cache.lock().await;
-                let mut metrics = vec![];
+        log::debug!("Building Tokio runtime");
+        let rt = tokio::runtime::Handle::current();
 
-                metrics.extend(scappers::scrape_getinfo(&mut lnd_client_lock).await);
-                metrics.extend(
-                    scappers::scrape_listpayments(
-                        &mut lnd_client_lock,
-                        &mut listpayments_cache_lock,
-                    )
+        let metrics = rt.block_on(async {
+            // Prevent concurrent collects
+            log::debug!("Acquiring collector locks");
+            let mut lnd_client_lock = lnd_client.lock().await;
+            let mut listpayments_cache_lock = listpayments_cache.lock().await;
+            let mut metrics = vec![];
+
+            metrics.extend(scappers::scrape_getinfo(&mut lnd_client_lock).await);
+            metrics.extend(
+                scappers::scrape_listpayments(&mut lnd_client_lock, &mut listpayments_cache_lock)
                     .await,
-                );
-                metrics.extend(scappers::scrape_listchannels(&mut lnd_client_lock).await);
+            );
+            metrics.extend(scappers::scrape_listchannels(&mut lnd_client_lock).await);
 
-                metrics
-            })
-        })
-        .join()
-        .unwrap();
+            metrics
+        });
 
         log::info!("Done collecting metrics");
         metrics
