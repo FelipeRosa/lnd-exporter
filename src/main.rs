@@ -2,13 +2,13 @@ mod collector;
 
 use std::net::SocketAddr;
 
-use clap::Clap;
+use clap::Parser;
 use prometheus::Encoder;
 use tokio::io::AsyncReadExt;
 
 use crate::collector::LndCollector;
 
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(version = "0.1.0", author = "Felipe Rosa <felipe.sgrosa@gmail.com>")]
 struct Opts {
     #[clap(long)]
@@ -30,7 +30,9 @@ async fn handler(
             .body(hyper::Body::empty())?),
 
         (&hyper::http::Method::GET, "/metrics") => {
-            let ms = prometheus::gather();
+            let ms = tokio::task::spawn_blocking(|| prometheus::gather())
+                .await
+                .expect("gather");
             let mut buf = vec![];
 
             match prometheus::TextEncoder::new().encode(&ms, &mut buf) {
@@ -53,7 +55,7 @@ async fn handler(
     }
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 

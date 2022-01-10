@@ -6,9 +6,9 @@ edition = "2018"
 [dependencies]
 hex = "0.4"
 hyper = "0.14"
-prost = "0.8"
+prost = "0.9"
 thiserror = "1.0"
-tonic = { version = "0.5", features = ["tls"] }
+tonic = { version = "0.6", features = ["tls"] }
 
 [build-dependencies]
-tonic-build = "0.5"
+tonic-build = "0.6"
